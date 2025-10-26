@@ -1,0 +1,26 @@
+{
+  "name": "the-bob-project",
+  "version": "1.0.0",
+  "description": "Rien à dire, tout à faire.",
+  "main": "index.js",
+  "scripts": {
+    "capture-data": "node index.js capture-data",
+    "start": "node index.js trade"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thearsenik/the-bob-project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/thearsenik/the-bob-project/issues"
+  },
+  "homepage": "https://github.com/thearsenik/the-bob-project#readme",
+  "dependencies": {
+    "axios": "^1.12.2",
+    "mongodb": "^6.20.0"
+  }
+}
