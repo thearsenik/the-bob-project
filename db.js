@@ -67,6 +67,17 @@ class DB {
       throw error;
     }
   }
+
+  async getAllHistoricalData() {
+    try {
+      const collection = this.db.collection('indices');
+      const allData = await collection.find({}).toArray();
+      return allData;
+    } catch (error) {
+      console.error('Error getting all historical data from MongoDB:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = DB;

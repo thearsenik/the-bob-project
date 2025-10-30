@@ -1,6 +1,7 @@
 const fs = require('fs');
 const IGAccount = require('./IGAccount.js');
 const IGApi = require('./IGApi.js');
+const brain = require('brain.js');
 const DB = require('./db.js');
 
 const init = async () => {
@@ -28,17 +29,15 @@ const init = async () => {
       break;
     case 'trade':
       await trade(sessionDetails, db, config);
-      closeDb = false;
+      break;
+    case 'train':
+      await trainAI(sessionDetails, db, config);
       break;
     case 'help':
     default:
       logHelp();
   }
-
-  // Disconnect from MongoDB
-  if (closeDb) {
-    await db.close();
-  }
+  await db.close();
 };
 
 const logHelp = () => {
@@ -118,6 +117,60 @@ const trade = async (sessionDetails, db, config) => {
 
   // Keep the process alive
   return new Promise(() => {});
+};
+
+const trainAI = async (sessionDetails, db, config) => {
+  console.log('Starting AI training...');
+
+  // 1. Load the data
+  const allData = await db.getAllHistoricalData();
+
+  if (!allData || allData.length === 0) {
+    console.log('No data found to train the AI. Please run capture-data first.');
+    return;
+  }
+
+  // 2. Prepare the data
+  // Combine all data into a single array of closing prices
+  const trainingData = [];
+  for (const record of allData) {
+    for (const price of record.data) {
+      trainingData.push(price.closePrice);
+    }
+  }
+
+  // Normalize the data
+  const min = Math.min(...trainingData);
+  const max = Math.max(...trainingData);
+  const normalizedData = trainingData.map(price => (price - min) / (max - min));
+
+  // Create training sequences
+  const sequenceLength = 30; // We'll use 30 data points to predict the next one
+  const trainingSequences = [];
+  for (let i = 0; i < normalizedData.length - sequenceLength; i++) {
+    trainingSequences.push({
+      input: normalizedData.slice(i, i + sequenceLength),
+      output: [normalizedData[i + sequenceLength]]
+    });
+  }
+
+  // 3. Create and train the model
+  const net = new brain.recurrent.LSTM();
+  net.train(trainingSequences, {
+    iterations: 100, // Number of training iterations
+    log: true, // Log training progress
+    logPeriod: 10, // Log progress every 10 iterations
+    errorThresh: 0.01 // Stop training when the error is below this threshold
+  });
+
+  // 4. Save the trained model
+  const modelJson = net.toJSON();
+  fs.writeFileSync('market-predictor-model.json', JSON.stringify(modelJson));
+  console.log('AI training complete. Model saved to market-predictor-model.json');
+
+  // Also save min and max for denormalization
+  fs.writeFileSync('market-predictor-model-scaling.json', JSON.stringify({ min, max }));
+  console.log('Scaling data saved to market-predictor-model-scaling.json');
 };
 
 init();
